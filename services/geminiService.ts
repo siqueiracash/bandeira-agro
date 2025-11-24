@@ -1,18 +1,36 @@
 import { GoogleGenAI } from "@google/genai";
 import { PropertyData, PropertyType, ValuationResult, GroundingSource } from "../types";
 
-const apiKey = process.env.API_KEY;
+// Helper to get API Key safely across different environments (Vite, Next.js, Node)
+const getApiKey = () => {
+  // @ts-ignore - Vite uses import.meta.env
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+    // @ts-ignore
+    return import.meta.env.VITE_API_KEY;
+  }
+  // Standard Node/Webpack process.env
+  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+    return process.env.API_KEY;
+  }
+  return '';
+};
+
+const apiKey = getApiKey();
 
 if (!apiKey) {
-  console.error("API_KEY environment variable is missing.");
+  console.warn("API Key não encontrada. Configure VITE_API_KEY no arquivo .env");
 }
 
-const ai = new GoogleGenAI({ apiKey: apiKey || '' });
+const ai = new GoogleGenAI({ apiKey: apiKey });
 
 /**
  * Generates a valuation report by searching for comparables and applying ABNT NBR 14653 logic.
  */
 export const generateValuationReport = async (data: PropertyData): Promise<ValuationResult> => {
+  if (!apiKey) {
+    throw new Error("Chave de API não configurada. Entre em contato com o administrador do sistema.");
+  }
+
   const modelId = "gemini-2.5-flash"; 
 
   const areaUnit = data.type === PropertyType.RURAL ? "hectares" : "metros quadrados";
