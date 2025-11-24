@@ -19,6 +19,7 @@ export const generateValuationReport = async (data: PropertyData): Promise<Valua
   const nbrStandard = data.type === PropertyType.URBAN ? "ABNT NBR 14653-2 (Imóveis Urbanos)" : "ABNT NBR 14653-3 (Imóveis Rurais)";
   
   let specificDetails = '';
+  let searchDescriptors = '';
 
   if (data.type === PropertyType.URBAN) {
     specificDetails = `
@@ -28,6 +29,9 @@ export const generateValuationReport = async (data: PropertyData): Promise<Valua
     - Vagas: ${data.parking || 'Não informado'}
     - Estado de Conservação: ${data.conservationState || 'Não informado'}
     `;
+    
+    // Construct a more specific search term for Urban
+    searchDescriptors = `${data.urbanSubType} ${data.bedrooms ? data.bedrooms + ' quartos' : ''} ${data.neighborhood ? 'bairro ' + data.neighborhood : ''}`;
   } else {
     specificDetails = `
     - Atividade Predominante: ${data.ruralActivity || 'Não informado'}
@@ -38,12 +42,13 @@ export const generateValuationReport = async (data: PropertyData): Promise<Valua
     - Ocupação: ${data.occupation || 'Não informado'}
     - Classificação Benfeitorias: ${data.improvements || 'Não informado'}
     `;
+
+    // Construct a more specific search term for Rural
+    searchDescriptors = `fazenda sítio ${data.ruralActivity} ${data.areaTotal} hectares`;
   }
 
-  // Construct search terms based on property type
-  const searchTerm = data.type === PropertyType.RURAL 
-    ? `venda fazenda sítio ${data.ruralActivity} em ${data.city} ${data.state}`
-    : `venda ${data.urbanSubType} em ${data.city} ${data.state}`;
+  // Construct optimized search query for Google Search Tool
+  const searchTerm = `venda ${searchDescriptors} em ${data.city} ${data.state} valor preço`;
 
   const prompt = `
     Atue como um Engenheiro de Avaliações Sênior expert na norma ${nbrStandard}.
@@ -59,9 +64,9 @@ export const generateValuationReport = async (data: PropertyData): Promise<Valua
     - Detalhes Adicionais: ${data.description}
 
     PROCEDIMENTO OBRIGATÓRIO (FUNDAMENTAL):
-    1. Utilize a ferramenta de busca (Google Search) para encontrar pelo menos 5 (CINCO) ofertas REAIS e ATUAIS de imóveis semelhantes na mesma região (${data.city}/${data.state}).
+    1. UTILIZE A FERRAMENTA DE BUSCA (Google Search) para encontrar pelo menos 5 (CINCO) ofertas REAIS e ATUAIS de imóveis semelhantes na mesma região (${data.city}/${data.state}).
        - Termo de busca sugerido: "${searchTerm}".
-    2. Liste estas 5 amostras em uma tabela detalhada.
+    2. Liste estas 5 amostras em uma tabela detalhada no laudo.
     3. Aplique o Método Comparativo Direto de Dados de Mercado conforme a ${nbrStandard}.
     4. Realize a HOMOGENEIZAÇÃO dos valores (aplique fatores de correção se necessário para local, topografia, padrão construtivo, conservação, etc).
     5. Calcule a média saneada ou mediana para definir o valor unitário (R$/${areaUnit}) e o Valor de Mercado Total.
@@ -76,11 +81,13 @@ export const generateValuationReport = async (data: PropertyData): Promise<Valua
     Breve panorama imobiliário da região de ${data.city}.
 
     ### 3. Pesquisa de Mercado (Amostragem)
-    *TABELA OBRIGATÓRIA* com 5 amostras contendo:
-    | Descrição | Localização | Área | Valor Oferta | Valor/Unid | Fonte |
+    *TABELA OBRIGATÓRIA* com 5 amostras contendo (Inclua o LINK/FONTE na tabela):
+    | Descrição | Localização | Área | Valor Oferta | Fonte (Site/Imobiliária) |
+    |---|---|---|---|---|
+    | ... | ... | ... | ... | ... |
     
     ### 4. Cálculos e Homogeneização
-    Explique os fatores de homogeneização utilizados (Ex: Fator Oferta, Fator Localização, Fator Conservação). Mostre o cálculo da média.
+    Explique os fatores de homogeneização utilizados (Ex: Fator Oferta -10%, Fator Localização, Fator Conservação). Mostre a tabela de homogeneização se possível.
 
     ### 5. Conclusão do Valor de Mercado
     Determine o valor final do imóvel.
@@ -89,7 +96,7 @@ export const generateValuationReport = async (data: PropertyData): Promise<Valua
     ### 6. Encerramento
     Local e Data de hoje. Assinado: BANDEIRA AGRO - Inteligência em Avaliações.
 
-    Importante: Seja extremamente técnico. Se não encontrar amostras idênticas na cidade exata, busque na microrregião e aplique fatores de correção, mas MANTENHA O MÍNIMO DE 5 AMOSTRAS.
+    Importante: Seja extremamente técnico. Se não encontrar amostras idênticas na cidade exata, busque na microrregião e aplique fatores de correção, mas MANTENHA O MÍNIMO DE 5 AMOSTRAS. Use links reais encontrados na busca.
   `;
 
   try {
@@ -98,7 +105,7 @@ export const generateValuationReport = async (data: PropertyData): Promise<Valua
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        systemInstruction: "Você é o avaliador chefe da BANDEIRA AGRO. Seu objetivo é fornecer avaliações precisas baseadas na NBR 14653. Você DEVE fornecer fontes reais.",
+        systemInstruction: "Você é o avaliador chefe da BANDEIRA AGRO. Seu objetivo é fornecer avaliações precisas baseadas na NBR 14653. Você DEVE buscar dados reais na web e fornecer as fontes.",
         temperature: 0.3, 
       },
     });
