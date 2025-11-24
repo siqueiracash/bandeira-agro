@@ -4,8 +4,10 @@ import StepSelection from './components/StepSelection';
 import StepForm from './components/StepForm';
 import LoadingScreen from './components/LoadingScreen';
 import ReportScreen from './components/ReportScreen';
+import LoginScreen from './components/LoginScreen';
+import AdminDashboard from './components/AdminDashboard';
 import { AppStep, PropertyData, PropertyType, ValuationResult } from './types';
-import { generateValuationReport } from './services/geminiService';
+import { generateManualValuation } from './services/valuationService';
 import { INITIAL_PROPERTY_DATA } from './constants';
 
 const App: React.FC = () => {
@@ -23,12 +25,12 @@ const App: React.FC = () => {
     setCurrentStep(AppStep.LOADING);
     
     try {
-      const result = await generateValuationReport(data);
+      const result = await generateManualValuation(data);
       setValuationResult(result);
       setCurrentStep(AppStep.RESULT);
     } catch (error) {
       console.error(error);
-      alert("Erro ao conectar com o serviço de avaliação. Verifique se a chave de API está configurada e tente novamente.");
+      alert("Erro ao processar a avaliação. Tente novamente.");
       setCurrentStep(AppStep.FORM);
     }
   };
@@ -44,31 +46,27 @@ const App: React.FC = () => {
     setValuationResult(null);
   };
 
+  const handleLoginSuccess = () => {
+    setCurrentStep(AppStep.DASHBOARD);
+  };
+
+  const handleLogout = () => {
+    handleBackToSelection();
+  };
+
   return (
-    <Layout>
-      {currentStep === AppStep.SELECTION && (
-        <StepSelection onSelect={handleTypeSelect} />
-      )}
+    <Layout 
+      onLoginClick={() => setCurrentStep(AppStep.LOGIN)} 
+      showLoginButton={currentStep !== AppStep.DASHBOARD && currentStep !== AppStep.LOGIN}
+    >
+      {currentStep === AppStep.SELECTION && <StepSelection onSelect={handleTypeSelect} />}
+      {currentStep === AppStep.FORM && <StepForm propertyType={propertyData.type} onSubmit={handleFormSubmit} onBack={handleBackToSelection} />}
+      {currentStep === AppStep.LOADING && <LoadingScreen />}
+      {currentStep === AppStep.RESULT && valuationResult && <ReportScreen data={valuationResult} property={propertyData} onReset={handleReset} />}
       
-      {currentStep === AppStep.FORM && (
-        <StepForm 
-          propertyType={propertyData.type} 
-          onSubmit={handleFormSubmit} 
-          onBack={handleBackToSelection}
-        />
-      )}
-
-      {currentStep === AppStep.LOADING && (
-        <LoadingScreen />
-      )}
-
-      {currentStep === AppStep.RESULT && valuationResult && (
-        <ReportScreen 
-          data={valuationResult} 
-          property={propertyData} 
-          onReset={handleReset} 
-        />
-      )}
+      {/* Telas Administrativas */}
+      {currentStep === AppStep.LOGIN && <LoginScreen onLoginSuccess={handleLoginSuccess} onBack={handleBackToSelection} />}
+      {currentStep === AppStep.DASHBOARD && <AdminDashboard onLogout={handleLogout} />}
     </Layout>
   );
 };
