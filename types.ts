@@ -50,8 +50,22 @@ export interface MarketSample {
   pricePerUnit: number; // Calculado
   date: string;
   source: string;
+  
+  // Campos Urbanos Específicos
   urbanSubType?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  parking?: number;
+  conservationState?: string;
+
+  // Campos Rurais Específicos
   ruralActivity?: string;
+  carNumber?: string;
+  surface?: string;
+  access?: string;
+  topography?: string;
+  occupation?: string;
+  improvements?: string;
 }
 
 // ATUALIZADA: Agora suporta MarketSample ou GroundingSource

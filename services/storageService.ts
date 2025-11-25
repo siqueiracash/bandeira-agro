@@ -46,8 +46,7 @@ export const getSamples = (): MarketSample[] => {
   try {
     return JSON.parse(stored);
   } catch (error) {
-    console.error("Erro ao ler banco de dados local. Resetando para evitar falhas.", error);
-    // Se o JSON estiver corrompido, reseta para os dados iniciais
+    console.error("Erro ao ler banco de dados local. Resetando.", error);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_DATA));
     return SEED_DATA;
   }
@@ -56,9 +55,8 @@ export const getSamples = (): MarketSample[] => {
 export const saveSample = (sample: Omit<MarketSample, 'id' | 'pricePerUnit'>) => {
   const samples = getSamples();
   
-  // Define divisor (Area construída para urbano se houver, ou total)
   const divisor = sample.areaBuilt && sample.areaBuilt > 0 ? sample.areaBuilt : sample.areaTotal;
-  const pricePerUnit = sample.price / divisor;
+  const pricePerUnit = sample.price / (divisor || 1);
 
   const newSample: MarketSample = {
     ...sample,
@@ -69,6 +67,27 @@ export const saveSample = (sample: Omit<MarketSample, 'id' | 'pricePerUnit'>) =>
   const updated = [newSample, ...samples];
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   return newSample;
+};
+
+// FUNÇÃO DE ATUALIZAÇÃO (EDITAR)
+export const updateSample = (sample: MarketSample) => {
+  const samples = getSamples();
+  const index = samples.findIndex(s => s.id === sample.id);
+
+  if (index !== -1) {
+    const divisor = sample.areaBuilt && sample.areaBuilt > 0 ? sample.areaBuilt : sample.areaTotal;
+    const pricePerUnit = sample.price / (divisor || 1);
+
+    const updatedSample = {
+      ...sample,
+      pricePerUnit
+    };
+
+    samples[index] = updatedSample;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(samples));
+    return updatedSample;
+  }
+  return null;
 };
 
 export const deleteSample = (id: string) => {
@@ -83,7 +102,6 @@ export const filterSamples = (type: PropertyType, city: string, state: string, s
     const matchType = s.type === type;
     const matchLoc = s.city.toLowerCase().trim() === city.toLowerCase().trim() && s.state === state;
     
-    // Filtro opcional por subtipo
     let matchSub = true;
     if (subTypeOrActivity) {
       if (type === PropertyType.URBAN && s.urbanSubType) matchSub = s.urbanSubType === subTypeOrActivity;
